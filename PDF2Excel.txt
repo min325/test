@@ -41,91 +41,99 @@ def SearchWord(TEXTS,WORDS,SPLIT,RANGE,GOOGLE):
 
 
 
+try:
+    #------ 1.input読込
+    PATH = os.getcwd()
+    #os.chdir('./Input')
+    wb    = px.load_workbook(PATH+"/Input/Input.xlsx")
+    ws    = wb.active
 
-#------ 1.input読込
-wb    = px.load_workbook("input.xlsx")
-ws    = wb.active
+    SPLIT  = ws["B2"].value
+    PDFOUT = ws["C2"].value
+    GOOGLE = ws["D2"].value
+    RANGE  = ws["E2"].value
 
-SPLIT =  ws["B2"].value
-PATH   = ws["C2"].value
-GOOGLE = ws["D2"].value
-RANGE  = ws["E2"].value
-
-WORDS = [str(ws.cell(row=2+i,column=1).value) for i in range(10000) ]
-WORDS = [i for i in WORDS if i != "None"]
-print("input.xlsx読込 Done/n")
-
-
-#------ 2.PDF読込
-os.chdir(PATH)
-PDF = []
-for filename in os.listdir(PATH):
-    if filename.endswith('.pdf'):
-        PDF.append(filename)
-
- 
-contents = []
-translator = Translator()
-
-for pdf in PDF:
-    doc = fitz.open(pdf)
-    print(pdf,"読込 Loading...")
-    for page in range(len(doc)): # PDFを1ページずつテキスト取得
-       print("　page",page,"Loading...") 
-       TEXTS = doc[page].get_text('text')
-       TEXTS = ([str(i) for i in TEXTS if i!="\n" ])       
-       TEXTS = ''.join(TEXTS)
-       hitword,hittext1,hittext2,hittext_tra = SearchWord(TEXTS,WORDS,SPLIT,RANGE,GOOGLE)
-       for i in range(len(hitword)):
-           contents.append([hitword[i],pdf,page+1,hittext1[i],hittext2[i],hittext_tra[i]])
-    print(pdf,"読込 Done...\n")
-
- 
-#------ 3.エクセル作成
-print("Excel outputing...") 
-wb = xlsxwriter.Workbook('Output.xlsx')
-ws = wb.add_worksheet()
-
-#----- 4.ヘッダー出力
-headers = ['No.', '検索単語','PDF名', 'ページ','本文','本文(翻訳)']
-ws.write_row('A1', headers, wb.add_format({'pattern': 1, 'bg_color': 'ccff00', 'border': 1}))
-ws.set_column('C:C', 20)
-ws.set_column('E:F', 50)
-
-#----- 5.検索結果出力
-for y in range(len(contents)):
-    ws.write(y+1,0,y+1,wb.add_format({'border': 1}))  # NO,
-    for x in range(len(contents[y])):
-        if x == 0:  # 検索単語
-            ws.write(y+1,1, contents[y][0],wb.add_format({'border': 1})) 
-        if x == 1:  # PDF名
-            ws.write(y+1,2, contents[y][1],wb.add_format({'border': 1,'text_wrap': True})) 
-        if x == 2:  #ページ
-            ws.write(y+1,3, contents[y][2],wb.add_format({'border': 1}))
-        if x == 3:  # 本文
-            ws.write_rich_string(y+1,4,wb.add_format({'color': 'black'}),contents[y][3],
-                                       wb.add_format({'color': 'red'}),contents[y][0],
-                                       wb.add_format({'color': 'black'}),contents[y][4],
-                                       wb.add_format({'text_wrap': True, 'border': 1}))            
-        if x == 5: # 本文(翻訳)
-            ws.write(y+1,5, contents[y][x],wb.add_format({'border': 1, 'text_wrap': True}))
-wb.close()
-print("Excel output Done... \n") 
+    WORDS = [str(ws.cell(row=2+i,column=1).value) for i in range(10000) ]
+    WORDS = [i for i in WORDS if i != "None"]
+    print("input.xlsx読込 Done/n")
 
 
+    #------ 2.PDF読込
+    PDF = []
+    for filename in os.listdir(PATH+"/Input"):
+        if filename.endswith('.pdf'):
+            PDF.append(filename)
+     
+    contents = []
+    translator = Translator()
+
+    for pdf in PDF:
+        doc = fitz.open(PATH+"/Input/"+pdf)
+        print(pdf," Loading...")
+        for page in range(len(doc)): # PDFを1ページずつテキスト取得
+           print("　page",page) 
+           TEXTS = doc[page].get_text('text')
+           TEXTS = ([str(i) for i in TEXTS if i!="\n" ])       
+           TEXTS = ''.join(TEXTS)
+           hitword,hittext1,hittext2,hittext_tra = SearchWord(TEXTS,WORDS,SPLIT,RANGE,GOOGLE)
+           for i in range(len(hitword)):
+               contents.append([hitword[i],pdf,page+1,hittext1[i],hittext2[i],hittext_tra[i]])
+        print(pdf," Done...\n")
+
+     
+    #------ 3.エクセル作成
+    os.makedirs(PATH+"/Output" , exist_ok=True)
+    print("Excel outputing...") 
+    wb = xlsxwriter.Workbook(PATH+'/Output/Output.xlsx')
+    ws = wb.add_worksheet()
+
+    #----- 4.ヘッダー出力
+    headers = ['No.', '検索単語','PDF名', 'ページ','本文','本文(翻訳)']
+    ws.write_row('A1', headers, wb.add_format({'pattern': 1, 'bg_color': 'ccff00', 'border': 1}))
+    ws.set_column('C:C', 20)
+    ws.set_column('E:F', 50)
+
+    #----- 5.検索結果出力
+    for y in range(len(contents)):
+        ws.write(y+1,0,y+1,wb.add_format({'border': 1}))  # NO,
+        for x in range(len(contents[y])):
+            if x == 0:  # 検索単語
+                ws.write(y+1,1, contents[y][0],wb.add_format({'border': 1})) 
+            if x == 1:  # PDF名
+                ws.write(y+1,2, contents[y][1],wb.add_format({'border': 1,'text_wrap': True})) 
+            if x == 2:  #ページ
+                ws.write(y+1,3, contents[y][2],wb.add_format({'border': 1}))
+            if x == 3:  # 本文
+                ws.write_rich_string(y+1,4,wb.add_format({'color': 'black'}),contents[y][3],
+                                           wb.add_format({'color': 'red'}),contents[y][0],
+                                           wb.add_format({'color': 'black'}),contents[y][4],
+                                           wb.add_format({'text_wrap': True, 'border': 1}))            
+            if x == 5: # 本文(翻訳)
+                ws.write(y+1,5, contents[y][x],wb.add_format({'border': 1, 'text_wrap': True}))
+    wb.close()
+    print("Excel output Done... \n") 
 
 
-#----- 6.PDF出力
-os.makedirs(PATH+"/output" , exist_ok=True)
-print("PDF outputing...")
-for pdf in PDF:
-    doc = fitz.open(pdf)
-    for i in range(doc.page_count):
-        for word in WORDS:
-            pos = doc[i].search_for(word, quads=True)
-            doc[i].add_squiggly_annot(pos)
-            doc[i].add_highlight_annot(pos)
 
-    doc.save(f'./output/{pdf}_output.pdf')
-print("PDF output Done")
 
+    #----- 6.PDF出力
+    if PDFOUT == 1:
+        print("PDF outputting...")
+        for pdf in PDF:
+            doc = fitz.open(PATH+"/Input/"+pdf)
+            for i in range(doc.page_count):
+                for word in WORDS:
+                    pos = doc[i].search_for(word, quads=True)
+                    doc[i].add_squiggly_annot(pos)
+                    doc[i].add_highlight_annot(pos)
+
+            doc.save(f'./Output/{pdf}_.pdf')
+        print("PDF Done")
+
+
+
+except Exception as e:
+    import traceback
+    with open(PATH+'/error.log', 'a') as f:
+        traceback.print_exc( file=f)
+        
